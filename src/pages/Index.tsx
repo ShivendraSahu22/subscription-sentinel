@@ -2,10 +2,25 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Trash2, Mail, User, Bot, Bell, Loader2, AlertTriangle } from "lucide-react";
+import {
+  Sparkles,
+  Send,
+  Trash2,
+  Mail,
+  User,
+  Bot,
+  Bell,
+  Loader2,
+  AlertTriangle,
+  Scale,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Classification = {
@@ -412,6 +427,8 @@ const ResultCard = ({ result }: { result: Classification }) => {
         </div>
       )}
 
+      {canRemind && <DecisionPanel result={result} />}
+
       <details className="border-t border-border/60 pt-2">
         <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
           View JSON
@@ -420,6 +437,140 @@ const ResultCard = ({ result }: { result: Classification }) => {
           {JSON.stringify(result, null, 2)}
         </pre>
       </details>
+    </div>
+  );
+};
+
+type Decision = { decision: "KEEP" | "CANCEL" | "ASK_USER"; reason: string };
+
+const decisionMeta: Record<
+  Decision["decision"],
+  { label: string; tone: string; icon: typeof CheckCircle2 }
+> = {
+  KEEP: {
+    label: "Keep",
+    tone: "border-success/30 bg-success/10 text-success",
+    icon: CheckCircle2,
+  },
+  CANCEL: {
+    label: "Cancel",
+    tone: "border-destructive/30 bg-destructive/10 text-destructive",
+    icon: XCircle,
+  },
+  ASK_USER: {
+    label: "Ask user",
+    tone: "border-info/30 bg-info/10 text-info",
+    icon: HelpCircle,
+  },
+};
+
+const DecisionPanel = ({ result }: { result: Classification }) => {
+  const [open, setOpen] = useState(false);
+  const [usage, setUsage] = useState("");
+  const [preference, setPreference] = useState("");
+  const [decision, setDecision] = useState<Decision | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const decide = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("decide-subscription", {
+        body: {
+          service_name: result.service_name,
+          amount: result.amount,
+          currency: result.currency,
+          usage,
+          preference,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setDecision(data as Decision);
+    } catch (e) {
+      toast({
+        title: "Couldn't decide",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <div className="border-t border-border/60 pt-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setOpen(true)}
+          className="w-full justify-start"
+        >
+          <Scale className="mr-2 h-3.5 w-3.5" />
+          Decide: keep or cancel?
+        </Button>
+      </div>
+    );
+  }
+
+  const meta = decision ? decisionMeta[decision.decision] : null;
+  const Icon = meta?.icon;
+
+  return (
+    <div className="space-y-2 border-t border-border/60 pt-3">
+      <div className="flex items-center gap-1.5">
+        <Scale className="h-3.5 w-3.5 text-muted-foreground" />
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Decide action
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <label className="text-xs text-muted-foreground">Usage</label>
+          <Input
+            value={usage}
+            onChange={(e) => setUsage(e.target.value)}
+            placeholder="e.g. 2 hours/month, daily, never opened"
+            className="mt-1 h-9 text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground">User preference</label>
+          <Input
+            value={preference}
+            onChange={(e) => setPreference(e.target.value)}
+            placeholder="e.g. cutting subscriptions, want to keep tools I love"
+            className="mt-1 h-9 text-sm"
+          />
+        </div>
+      </div>
+
+      <Button
+        size="sm"
+        onClick={decide}
+        disabled={loading}
+        className="w-full bg-gradient-primary hover:opacity-90"
+      >
+        {loading ? (
+          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+        ) : (
+          <Scale className="mr-2 h-3.5 w-3.5" />
+        )}
+        {decision ? "Re-decide" : "Get decision"}
+      </Button>
+
+      {decision && meta && Icon && (
+        <div className={`rounded-lg border p-3 ${meta.tone}`}>
+          <div className="mb-1 flex items-center gap-1.5">
+            <Icon className="h-3.5 w-3.5" />
+            <p className="text-xs font-semibold uppercase tracking-wide">
+              {meta.label}
+            </p>
+          </div>
+          <p className="text-sm text-foreground">{decision.reason}</p>
+        </div>
+      )}
     </div>
   );
 };
