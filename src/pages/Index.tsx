@@ -577,4 +577,78 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
   );
 };
 
+const SummaryPanel = ({ historyCount }: { historyCount: number }) => {
+  const [summary, setSummary] = useState<string | null>(null);
+  const [count, setCount] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  // Invalidate when history changes
+  useEffect(() => {
+    if (summary && historyCount !== count) setSummary(null);
+  }, [historyCount, count, summary]);
+
+  const generate = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("summarize-subscriptions", {
+        body: {},
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setSummary(data.summary);
+      setCount(data.count ?? 0);
+    } catch (e) {
+      toast({
+        title: "Couldn't summarize",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (historyCount === 0) return null;
+
+  return (
+    <div className="border-b border-border/60 bg-accent/40 p-3">
+      {summary ? (
+        <div className="rounded-lg border border-primary/20 bg-card p-3 shadow-soft">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Wallet className="h-3.5 w-3.5 text-primary" />
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                Spend summary
+              </p>
+            </div>
+            <button
+              onClick={generate}
+              disabled={loading}
+              className="text-[10px] text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+            >
+              {loading ? "..." : "Refresh"}
+            </button>
+          </div>
+          <p className="text-sm leading-relaxed text-foreground">{summary}</p>
+        </div>
+      ) : (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={generate}
+          disabled={loading}
+          className="w-full justify-start"
+        >
+          {loading ? (
+            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Wallet className="mr-2 h-3.5 w-3.5" />
+          )}
+          Summarize my subscriptions
+        </Button>
+      )}
+    </div>
+  );
+};
+
 export default Index;
