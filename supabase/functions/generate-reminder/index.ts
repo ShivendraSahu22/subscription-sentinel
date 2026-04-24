@@ -53,7 +53,7 @@ Amount: ${money || "N/A"}`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: PROMPTS[reminderType] },
           { role: "user", content: userPrompt },
         ],
       }),
