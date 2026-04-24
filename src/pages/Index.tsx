@@ -2,10 +2,25 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Trash2, Mail, User, Bot, Bell, Loader2, AlertTriangle } from "lucide-react";
+import {
+  Sparkles,
+  Send,
+  Trash2,
+  Mail,
+  User,
+  Bot,
+  Bell,
+  Loader2,
+  AlertTriangle,
+  Scale,
+  CheckCircle2,
+  XCircle,
+  HelpCircle,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Classification = {
