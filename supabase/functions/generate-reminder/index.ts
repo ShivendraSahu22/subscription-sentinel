@@ -6,22 +6,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You generate short reminder notifications.
+const PROMPTS = {
+  upcoming: `You generate short reminder notifications.
 
 Rules:
 - Max 20 words
 - Urgent but friendly tone
 - Include money if available
-- Output ONLY the reminder text, no quotes, no prefix, no explanation`;
+- Output ONLY the reminder text, no quotes, no prefix, no explanation`,
+  last_day: `You generate last-day warning notifications.
+
+Rules:
+- Max 15 words
+- Create urgency
+- Mention the charge
+- Output ONLY the reminder text, no quotes, no prefix, no explanation`,
+} as const;
+
+type ReminderType = keyof typeof PROMPTS;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { service_name, trial_end_date, amount, currency } = await req.json();
+    const { service_name, trial_end_date, amount, currency, type } = await req.json();
+    const reminderType: ReminderType = type === "last_day" ? "last_day" : "upcoming";
 
     const money = [amount, currency].filter(Boolean).join(" ").trim();
-    const userPrompt = `Service: ${service_name || "Unknown"}
+    const userPrompt =
+      reminderType === "last_day"
+        ? `Service: ${service_name || "Unknown"}
+Amount: ${money || "N/A"}`
+        : `Service: ${service_name || "Unknown"}
 Trial End: ${trial_end_date || "Unknown"}
 Amount: ${money || "N/A"}`;
 
