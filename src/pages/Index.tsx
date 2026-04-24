@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Trash2, Mail, User, Bot, Bell, Loader2 } from "lucide-react";
+import { Sparkles, Send, Trash2, Mail, User, Bot, Bell, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Classification = {
@@ -273,9 +273,29 @@ const Index = () => {
   );
 };
 
+type ReminderType = "upcoming" | "last_day";
+
+const reminderMeta: Record<
+  ReminderType,
+  { label: string; short: string; tone: string; icon: typeof Bell }
+> = {
+  upcoming: {
+    label: "Reminder",
+    short: "Generate reminder",
+    tone: "border-warning/30 bg-warning/10 text-warning",
+    icon: Bell,
+  },
+  last_day: {
+    label: "Last-day warning",
+    short: "Last-day warning",
+    tone: "border-destructive/30 bg-destructive/10 text-destructive",
+    icon: AlertTriangle,
+  },
+};
+
 const ResultCard = ({ result }: { result: Classification }) => {
-  const [reminder, setReminder] = useState<string | null>(null);
-  const [loadingReminder, setLoadingReminder] = useState(false);
+  const [reminders, setReminders] = useState<Partial<Record<ReminderType, string>>>({});
+  const [loadingType, setLoadingType] = useState<ReminderType | null>(null);
 
   const fields: { label: string; value: string }[] = [
     { label: "Service", value: result.service_name },
@@ -291,8 +311,8 @@ const ResultCard = ({ result }: { result: Classification }) => {
     result.category !== "NOT_RELEVANT" &&
     (result.service_name || result.trial_end_date || result.amount);
 
-  const generateReminder = async () => {
-    setLoadingReminder(true);
+  const generate = async (type: ReminderType) => {
+    setLoadingType(type);
     try {
       const { data, error } = await supabase.functions.invoke("generate-reminder", {
         body: {
@@ -300,19 +320,20 @@ const ResultCard = ({ result }: { result: Classification }) => {
           trial_end_date: result.trial_end_date,
           amount: result.amount,
           currency: result.currency,
+          type,
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setReminder(data.reminder);
+      setReminders((r) => ({ ...r, [type]: data.reminder }));
     } catch (e) {
       toast({
-        title: "Couldn't generate reminder",
+        title: "Couldn't generate notification",
         description: e instanceof Error ? e.message : "Unknown error",
         variant: "destructive",
       });
     } finally {
-      setLoadingReminder(false);
+      setLoadingType(null);
     }
   };
 
@@ -342,40 +363,52 @@ const ResultCard = ({ result }: { result: Classification }) => {
       )}
 
       {canRemind && (
-        <div className="border-t border-border/60 pt-3">
-          {reminder ? (
-            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
-              <div className="mb-1 flex items-center gap-1.5">
-                <Bell className="h-3.5 w-3.5 text-warning" />
-                <p className="text-xs font-semibold uppercase tracking-wide text-warning">
-                  Reminder
-                </p>
-              </div>
-              <p className="text-sm text-foreground">{reminder}</p>
-              <button
-                onClick={generateReminder}
-                disabled={loadingReminder}
-                className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+        <div className="space-y-2 border-t border-border/60 pt-3">
+          {(Object.keys(reminderMeta) as ReminderType[]).map((type) => {
+            const meta = reminderMeta[type];
+            const Icon = meta.icon;
+            const text = reminders[type];
+            const isLoading = loadingType === type;
+
+            if (text) {
+              return (
+                <div key={type} className={`rounded-lg border p-3 ${meta.tone}`}>
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5" />
+                    <p className="text-xs font-semibold uppercase tracking-wide">
+                      {meta.label}
+                    </p>
+                  </div>
+                  <p className="text-sm text-foreground">{text}</p>
+                  <button
+                    onClick={() => generate(type)}
+                    disabled={isLoading}
+                    className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    {isLoading ? "Regenerating..." : "Regenerate"}
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <Button
+                key={type}
+                variant="outline"
+                size="sm"
+                onClick={() => generate(type)}
+                disabled={isLoading}
+                className="w-full justify-start"
               >
-                {loadingReminder ? "Regenerating..." : "Regenerate"}
-              </button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={generateReminder}
-              disabled={loadingReminder}
-              className="w-full"
-            >
-              {loadingReminder ? (
-                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Bell className="mr-2 h-3.5 w-3.5" />
-              )}
-              Generate reminder
-            </Button>
-          )}
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Icon className="mr-2 h-3.5 w-3.5" />
+                )}
+                {meta.short}
+              </Button>
+            );
+          })}
         </div>
       )}
 
