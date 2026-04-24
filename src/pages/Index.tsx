@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
+  Wallet,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -245,6 +246,7 @@ const Index = () => {
               <p className="text-sm font-semibold">Recent classifications</p>
               <p className="text-xs text-muted-foreground">{history.length} saved</p>
             </div>
+            <SummaryPanel historyCount={history.length} />
             <ScrollArea className="flex-1">
               <div className="space-y-2 p-3">
                 {history.length === 0 && (
