@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Send, Trash2, Mail, User, Bot } from "lucide-react";
+import { Sparkles, Send, Trash2, Mail, User, Bot, Bell, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Classification = {
@@ -274,6 +274,9 @@ const Index = () => {
 };
 
 const ResultCard = ({ result }: { result: Classification }) => {
+  const [reminder, setReminder] = useState<string | null>(null);
+  const [loadingReminder, setLoadingReminder] = useState(false);
+
   const fields: { label: string; value: string }[] = [
     { label: "Service", value: result.service_name },
     { label: "Trial ends", value: result.trial_end_date },
@@ -283,6 +286,35 @@ const ResultCard = ({ result }: { result: Classification }) => {
     },
     { label: "Frequency", value: result.frequency },
   ].filter((f) => f.value);
+
+  const canRemind =
+    result.category !== "NOT_RELEVANT" &&
+    (result.service_name || result.trial_end_date || result.amount);
+
+  const generateReminder = async () => {
+    setLoadingReminder(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-reminder", {
+        body: {
+          service_name: result.service_name,
+          trial_end_date: result.trial_end_date,
+          amount: result.amount,
+          currency: result.currency,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setReminder(data.reminder);
+    } catch (e) {
+      toast({
+        title: "Couldn't generate reminder",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingReminder(false);
+    }
+  };
 
   return (
     <div className="max-w-[85%] space-y-3 rounded-2xl rounded-tl-sm border border-border/60 bg-card p-4 shadow-soft">
@@ -306,6 +338,44 @@ const ResultCard = ({ result }: { result: Classification }) => {
               <p className="text-sm font-medium">{f.value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {canRemind && (
+        <div className="border-t border-border/60 pt-3">
+          {reminder ? (
+            <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
+              <div className="mb-1 flex items-center gap-1.5">
+                <Bell className="h-3.5 w-3.5 text-warning" />
+                <p className="text-xs font-semibold uppercase tracking-wide text-warning">
+                  Reminder
+                </p>
+              </div>
+              <p className="text-sm text-foreground">{reminder}</p>
+              <button
+                onClick={generateReminder}
+                disabled={loadingReminder}
+                className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {loadingReminder ? "Regenerating..." : "Regenerate"}
+              </button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateReminder}
+              disabled={loadingReminder}
+              className="w-full"
+            >
+              {loadingReminder ? (
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Bell className="mr-2 h-3.5 w-3.5" />
+              )}
+              Generate reminder
+            </Button>
+          )}
         </div>
       )}
 
