@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      cancellation_suggestions: {
+        Row: {
+          classification_id: string
+          created_at: string
+          id: string
+          suggestion: string
+          usage: string | null
+          user_id: string
+        }
+        Insert: {
+          classification_id: string
+          created_at?: string
+          id?: string
+          suggestion: string
+          usage?: string | null
+          user_id: string
+        }
+        Update: {
+          classification_id?: string
+          created_at?: string
+          id?: string
+          suggestion?: string
+          usage?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_suggestions_classification_id_fkey"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "classifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       classifications: {
         Row: {
           amount: string | null
@@ -25,6 +60,7 @@ export type Database = {
           id: string
           service_name: string | null
           trial_end_date: string | null
+          user_id: string | null
         }
         Insert: {
           amount?: string | null
@@ -36,6 +72,7 @@ export type Database = {
           id?: string
           service_name?: string | null
           trial_end_date?: string | null
+          user_id?: string | null
         }
         Update: {
           amount?: string | null
@@ -47,6 +84,107 @@ export type Database = {
           id?: string
           service_name?: string | null
           trial_end_date?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      decisions: {
+        Row: {
+          classification_id: string
+          created_at: string
+          decision: string
+          id: string
+          preference: string | null
+          reason: string
+          usage: string | null
+          user_id: string
+        }
+        Insert: {
+          classification_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          preference?: string | null
+          reason: string
+          usage?: string | null
+          user_id: string
+        }
+        Update: {
+          classification_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          preference?: string | null
+          reason?: string
+          usage?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_classification_id_fkey"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "classifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminders: {
+        Row: {
+          classification_id: string
+          created_at: string
+          id: string
+          message: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          classification_id: string
+          created_at?: string
+          id?: string
+          message: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          classification_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_classification_id_fkey"
+            columns: ["classification_id"]
+            isOneToOne: false
+            referencedRelation: "classifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      summaries: {
+        Row: {
+          classifications_count: number
+          created_at: string
+          id: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          classifications_count?: number
+          created_at?: string
+          id?: string
+          summary: string
+          user_id: string
+        }
+        Update: {
+          classifications_count?: number
+          created_at?: string
+          id?: string
+          summary?: string
+          user_id?: string
         }
         Relationships: []
       }
