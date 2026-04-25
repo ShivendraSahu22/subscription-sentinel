@@ -601,6 +601,35 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
           <p className="text-sm text-foreground">{decision.reason}</p>
         </div>
       )}
+
+      <div className="space-y-2 border-t border-border/60 pt-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={suggestCancellation}
+          disabled={suggestLoading}
+          className="w-full justify-start"
+        >
+          {suggestLoading ? (
+            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Scissors className="mr-2 h-3.5 w-3.5" />
+          )}
+          {suggestion ? "Redraft cancellation suggestion" : "Suggest cancellation"}
+        </Button>
+
+        {suggestion && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-destructive">
+            <div className="mb-1 flex items-center gap-1.5">
+              <Scissors className="h-3.5 w-3.5" />
+              <p className="text-xs font-semibold uppercase tracking-wide">
+                Cancellation suggestion
+              </p>
+            </div>
+            <p className="text-sm text-foreground">{suggestion}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
