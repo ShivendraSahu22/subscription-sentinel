@@ -502,6 +502,31 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
     }
   };
 
+  const suggestCancellation = async () => {
+    setSuggestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-cancellation", {
+        body: {
+          service_name: result.service_name,
+          amount: result.amount,
+          currency: result.currency,
+          usage,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setSuggestion(data.suggestion);
+    } catch (e) {
+      toast({
+        title: "Couldn't draft suggestion",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setSuggestLoading(false);
+    }
+  };
+
   if (!open) {
     return (
       <div className="border-t border-border/60 pt-3">
