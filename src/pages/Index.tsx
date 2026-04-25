@@ -21,6 +21,7 @@ import {
   XCircle,
   HelpCircle,
   Wallet,
+  Scissors,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
