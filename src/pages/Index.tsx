@@ -21,6 +21,7 @@ import {
   XCircle,
   HelpCircle,
   Wallet,
+  Scissors,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -472,6 +473,8 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
   const [preference, setPreference] = useState("");
   const [decision, setDecision] = useState<Decision | null>(null);
   const [loading, setLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
 
   const decide = async () => {
     setLoading(true);
@@ -496,6 +499,31 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const suggestCancellation = async () => {
+    setSuggestLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-cancellation", {
+        body: {
+          service_name: result.service_name,
+          amount: result.amount,
+          currency: result.currency,
+          usage,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setSuggestion(data.suggestion);
+    } catch (e) {
+      toast({
+        title: "Couldn't draft suggestion",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setSuggestLoading(false);
     }
   };
 
@@ -573,6 +601,35 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
           <p className="text-sm text-foreground">{decision.reason}</p>
         </div>
       )}
+
+      <div className="space-y-2 border-t border-border/60 pt-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={suggestCancellation}
+          disabled={suggestLoading}
+          className="w-full justify-start"
+        >
+          {suggestLoading ? (
+            <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Scissors className="mr-2 h-3.5 w-3.5" />
+          )}
+          {suggestion ? "Redraft cancellation suggestion" : "Suggest cancellation"}
+        </Button>
+
+        {suggestion && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-destructive">
+            <div className="mb-1 flex items-center gap-1.5">
+              <Scissors className="h-3.5 w-3.5" />
+              <p className="text-xs font-semibold uppercase tracking-wide">
+                Cancellation suggestion
+              </p>
+            </div>
+            <p className="text-sm text-foreground">{suggestion}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
