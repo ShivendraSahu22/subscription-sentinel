@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -22,16 +23,18 @@ import {
   HelpCircle,
   Wallet,
   Scissors,
+  LogOut,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 type Classification = {
+  id: string;
   category: string;
-  service_name: string;
-  trial_end_date: string;
-  amount: string;
-  currency: string;
-  frequency: string;
+  service_name: string | null;
+  trial_end_date: string | null;
+  amount: string | null;
+  currency: string | null;
+  frequency: string | null;
 };
 
 type Message =
@@ -39,9 +42,25 @@ type Message =
   | { role: "assistant"; result: Classification; id: string };
 
 type SavedRow = Classification & {
-  id: string;
   email_body: string;
   created_at: string;
+};
+
+type ReminderType = "upcoming" | "last_day";
+type ReminderRow = { id: string; classification_id: string; type: ReminderType; message: string };
+type DecisionRow = {
+  id: string;
+  classification_id: string;
+  decision: "KEEP" | "CANCEL" | "ASK_USER";
+  reason: string;
+  usage: string | null;
+  preference: string | null;
+};
+type SuggestionRow = {
+  id: string;
+  classification_id: string;
+  suggestion: string;
+  usage: string | null;
 };
 
 const SAMPLE = `Hi Alex,
@@ -61,23 +80,35 @@ const categoryStyles: Record<string, string> = {
 };
 
 const Index = () => {
+  const { user, signOut } = useAuth();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [history, setHistory] = useState<SavedRow[]>([]);
+  const [reminders, setReminders] = useState<ReminderRow[]>([]);
+  const [decisions, setDecisions] = useState<DecisionRow[]>([]);
+  const [suggestions, setSuggestions] = useState<SuggestionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const loadHistory = async () => {
-    const { data } = await supabase
-      .from("classifications")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (data) setHistory(data as SavedRow[]);
+  const loadAll = async () => {
+    const [h, r, d, s] = await Promise.all([
+      supabase
+        .from("classifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase.from("reminders").select("*"),
+      supabase.from("decisions").select("*"),
+      supabase.from("cancellation_suggestions").select("*"),
+    ]);
+    if (h.data) setHistory(h.data as SavedRow[]);
+    if (r.data) setReminders(r.data as ReminderRow[]);
+    if (d.data) setDecisions(d.data as DecisionRow[]);
+    if (s.data) setSuggestions(s.data as SuggestionRow[]);
   };
 
   useEffect(() => {
-    loadHistory();
+    loadAll();
   }, []);
 
   useEffect(() => {
@@ -100,19 +131,17 @@ const Index = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      const result = data as Classification;
+      const result: Classification = {
+        id: data.id,
+        category: data.category,
+        service_name: data.service_name || null,
+        trial_end_date: data.trial_end_date || null,
+        amount: data.amount || null,
+        currency: data.currency || null,
+        frequency: data.frequency || null,
+      };
       setMessages((m) => [...m, { role: "assistant", result, id: crypto.randomUUID() }]);
-
-      await supabase.from("classifications").insert({
-        email_body: body,
-        category: result.category,
-        service_name: result.service_name || null,
-        trial_end_date: result.trial_end_date || null,
-        amount: result.amount || null,
-        currency: result.currency || null,
-        frequency: result.frequency || null,
-      });
-      loadHistory();
+      loadAll();
     } catch (e) {
       toast({
         title: "Classification failed",
@@ -126,10 +155,23 @@ const Index = () => {
 
   const clearChat = () => setMessages([]);
 
+  const reminderFor = (classificationId: string, type: ReminderType) =>
+    reminders.find((r) => r.classification_id === classificationId && r.type === type);
+  const decisionFor = (classificationId: string) =>
+    decisions.find((d) => d.classification_id === classificationId);
+  const suggestionFor = (classificationId: string) =>
+    suggestions.find((s) => s.classification_id === classificationId);
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container max-w-6xl py-8">
         <header className="mb-8 text-center">
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-xs text-muted-foreground">{user?.email}</span>
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
+            </Button>
+          </div>
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted-foreground shadow-soft">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Powered by Lovable AI
@@ -169,9 +211,7 @@ const Index = () => {
                     </div>
                     <div>
                       <p className="font-medium">Paste an email to get started</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Or try a sample below
-                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">Or try a sample below</p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => send(SAMPLE)}>
                       Try sample email
@@ -194,7 +234,16 @@ const Index = () => {
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-primary">
                         <Bot className="h-4 w-4 text-primary-foreground" />
                       </div>
-                      <ResultCard result={m.result} />
+                      <ResultCard
+                        result={m.result}
+                        existingReminders={{
+                          upcoming: reminderFor(m.result.id, "upcoming")?.message,
+                          last_day: reminderFor(m.result.id, "last_day")?.message,
+                        }}
+                        existingDecision={decisionFor(m.result.id) ?? null}
+                        existingSuggestion={suggestionFor(m.result.id) ?? null}
+                        onChange={loadAll}
+                      />
                     </div>
                   ),
                 )}
@@ -291,8 +340,6 @@ const Index = () => {
   );
 };
 
-type ReminderType = "upcoming" | "last_day";
-
 const reminderMeta: Record<
   ReminderType,
   { label: string; short: string; tone: string; icon: typeof Bell }
@@ -311,39 +358,49 @@ const reminderMeta: Record<
   },
 };
 
-const ResultCard = ({ result }: { result: Classification }) => {
-  const [reminders, setReminders] = useState<Partial<Record<ReminderType, string>>>({});
+const ResultCard = ({
+  result,
+  existingReminders,
+  existingDecision,
+  existingSuggestion,
+  onChange,
+}: {
+  result: Classification;
+  existingReminders: Partial<Record<ReminderType, string>>;
+  existingDecision: DecisionRow | null;
+  existingSuggestion: SuggestionRow | null;
+  onChange: () => void;
+}) => {
+  const [reminders, setReminders] =
+    useState<Partial<Record<ReminderType, string>>>(existingReminders);
   const [loadingType, setLoadingType] = useState<ReminderType | null>(null);
 
+  useEffect(() => setReminders(existingReminders), [existingReminders]);
+
   const fields: { label: string; value: string }[] = [
-    { label: "Service", value: result.service_name },
-    { label: "Trial ends", value: result.trial_end_date },
+    { label: "Service", value: result.service_name ?? "" },
+    { label: "Trial ends", value: result.trial_end_date ?? "" },
     {
       label: "Amount",
       value: [result.amount, result.currency].filter(Boolean).join(" "),
     },
-    { label: "Frequency", value: result.frequency },
+    { label: "Frequency", value: result.frequency ?? "" },
   ].filter((f) => f.value);
 
   const canRemind =
     result.category !== "NOT_RELEVANT" &&
-    (result.service_name || result.trial_end_date || result.amount);
+    !!(result.service_name || result.trial_end_date || result.amount);
 
   const generate = async (type: ReminderType) => {
     setLoadingType(type);
     try {
       const { data, error } = await supabase.functions.invoke("generate-reminder", {
-        body: {
-          service_name: result.service_name,
-          trial_end_date: result.trial_end_date,
-          amount: result.amount,
-          currency: result.currency,
-          type,
-        },
+        body: { classification_id: result.id, type },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setReminders((r) => ({ ...r, [type]: data.reminder }));
+      onChange();
     } catch (e) {
       toast({
         title: "Couldn't generate notification",
@@ -361,10 +418,7 @@ const ResultCard = ({ result }: { result: Classification }) => {
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Category
         </p>
-        <Badge
-          variant="outline"
-          className={`mt-1 ${categoryStyles[result.category] ?? ""}`}
-        >
+        <Badge variant="outline" className={`mt-1 ${categoryStyles[result.category] ?? ""}`}>
           {result.category}
         </Badge>
       </div>
@@ -393,9 +447,7 @@ const ResultCard = ({ result }: { result: Classification }) => {
                 <div key={type} className={`rounded-lg border p-3 ${meta.tone}`}>
                   <div className="mb-1 flex items-center gap-1.5">
                     <Icon className="h-3.5 w-3.5" />
-                    <p className="text-xs font-semibold uppercase tracking-wide">
-                      {meta.label}
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wide">{meta.label}</p>
                   </div>
                   <p className="text-sm text-foreground">{text}</p>
                   <button
@@ -430,7 +482,14 @@ const ResultCard = ({ result }: { result: Classification }) => {
         </div>
       )}
 
-      {canRemind && <DecisionPanel result={result} />}
+      {canRemind && (
+        <DecisionPanel
+          result={result}
+          existingDecision={existingDecision}
+          existingSuggestion={existingSuggestion}
+          onChange={onChange}
+        />
+      )}
 
       <details className="border-t border-border/60 pt-2">
         <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
@@ -467,30 +526,39 @@ const decisionMeta: Record<
   },
 };
 
-const DecisionPanel = ({ result }: { result: Classification }) => {
-  const [open, setOpen] = useState(false);
-  const [usage, setUsage] = useState("");
-  const [preference, setPreference] = useState("");
-  const [decision, setDecision] = useState<Decision | null>(null);
+const DecisionPanel = ({
+  result,
+  existingDecision,
+  existingSuggestion,
+  onChange,
+}: {
+  result: Classification;
+  existingDecision: DecisionRow | null;
+  existingSuggestion: SuggestionRow | null;
+  onChange: () => void;
+}) => {
+  const [open, setOpen] = useState(!!existingDecision || !!existingSuggestion);
+  const [usage, setUsage] = useState(existingDecision?.usage ?? existingSuggestion?.usage ?? "");
+  const [preference, setPreference] = useState(existingDecision?.preference ?? "");
+  const [decision, setDecision] = useState<Decision | null>(
+    existingDecision ? { decision: existingDecision.decision, reason: existingDecision.reason } : null,
+  );
   const [loading, setLoading] = useState(false);
-  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<string | null>(
+    existingSuggestion?.suggestion ?? null,
+  );
   const [suggestLoading, setSuggestLoading] = useState(false);
 
   const decide = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("decide-subscription", {
-        body: {
-          service_name: result.service_name,
-          amount: result.amount,
-          currency: result.currency,
-          usage,
-          preference,
-        },
+        body: { classification_id: result.id, usage, preference },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setDecision(data as Decision);
+      onChange();
     } catch (e) {
       toast({
         title: "Couldn't decide",
@@ -506,16 +574,12 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
     setSuggestLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("suggest-cancellation", {
-        body: {
-          service_name: result.service_name,
-          amount: result.amount,
-          currency: result.currency,
-          usage,
-        },
+        body: { classification_id: result.id, usage },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setSuggestion(data.suggestion);
+      onChange();
     } catch (e) {
       toast({
         title: "Couldn't draft suggestion",
@@ -594,9 +658,7 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
         <div className={`rounded-lg border p-3 ${meta.tone}`}>
           <div className="mb-1 flex items-center gap-1.5">
             <Icon className="h-3.5 w-3.5" />
-            <p className="text-xs font-semibold uppercase tracking-wide">
-              {meta.label}
-            </p>
+            <p className="text-xs font-semibold uppercase tracking-wide">{meta.label}</p>
           </div>
           <p className="text-sm text-foreground">{decision.reason}</p>
         </div>
@@ -638,6 +700,22 @@ const SummaryPanel = ({ historyCount }: { historyCount: number }) => {
   const [summary, setSummary] = useState<string | null>(null);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // Load latest saved summary on mount
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("summaries")
+        .select("summary, classifications_count")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setSummary(data.summary);
+        setCount(data.classifications_count);
+      }
+    })();
+  }, []);
 
   // Invalidate when history changes
   useEffect(() => {
