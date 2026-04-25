@@ -473,6 +473,8 @@ const DecisionPanel = ({ result }: { result: Classification }) => {
   const [preference, setPreference] = useState("");
   const [decision, setDecision] = useState<Decision | null>(null);
   const [loading, setLoading] = useState(false);
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
 
   const decide = async () => {
     setLoading(true);
