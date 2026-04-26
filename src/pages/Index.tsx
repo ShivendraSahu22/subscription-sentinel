@@ -73,13 +73,7 @@ type SuggestionRow = {
   usage: string | null;
 };
 
-const SAMPLE = `Hi Alex,
-
-Welcome to Notion! Your 14-day Pro free trial has started today.
-Your trial ends on May 8, 2026. After that, you'll be billed $10 USD per month
-unless you cancel.
-
-— The Notion Team`;
+// (sample email removed — users now scan their own inbox)
 
 const categoryStyles: Record<string, string> = {
   FREE_TRIAL_STARTED: "bg-info/10 text-info border-info/20",
