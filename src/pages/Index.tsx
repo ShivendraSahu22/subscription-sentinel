@@ -24,7 +24,17 @@ import {
   Wallet,
   Scissors,
   LogOut,
+  Inbox,
+  ExternalLink,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 
 type Classification = {
@@ -63,13 +73,7 @@ type SuggestionRow = {
   usage: string | null;
 };
 
-const SAMPLE = `Hi Alex,
-
-Welcome to Notion! Your 14-day Pro free trial has started today.
-Your trial ends on May 8, 2026. After that, you'll be billed $10 USD per month
-unless you cancel.
-
-— The Notion Team`;
+// (sample email removed — users now scan their own inbox)
 
 const categoryStyles: Record<string, string> = {
   FREE_TRIAL_STARTED: "bg-info/10 text-info border-info/20",
@@ -88,6 +92,9 @@ const Index = () => {
   const [decisions, setDecisions] = useState<DecisionRow[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [gmailToken, setGmailToken] = useState("");
+  const [scanning, setScanning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadAll = async () => {
@@ -155,6 +162,41 @@ const Index = () => {
 
   const clearChat = () => setMessages([]);
 
+  const scanInbox = async () => {
+    const token = gmailToken.trim();
+    if (!token) {
+      toast({
+        title: "Gmail access token required",
+        description: "Paste a Google OAuth access token with gmail.readonly scope.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setScanning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("scan-emails", {
+        body: { provider_token: token, max_emails: 50 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "Scan complete",
+        description: `Scanned ${data.scanned ?? 0} emails — found ${data.found ?? 0} subscription${data.found === 1 ? "" : "s"}.`,
+      });
+      setScanOpen(false);
+      setGmailToken("");
+      loadAll();
+    } catch (e) {
+      toast({
+        title: "Scan failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const reminderFor = (classificationId: string, type: ReminderType) =>
     reminders.find((r) => r.classification_id === classificationId && r.type === type);
   const decisionFor = (classificationId: string) =>
@@ -167,6 +209,9 @@ const Index = () => {
       <div className="container max-w-6xl py-8">
         <header className="mb-8 text-center">
           <div className="flex items-center justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setScanOpen(true)}>
+              <Inbox className="mr-1.5 h-3.5 w-3.5" /> Scan mails
+            </Button>
             <span className="text-xs text-muted-foreground">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="mr-1.5 h-3.5 w-3.5" /> Sign out
@@ -210,11 +255,18 @@ const Index = () => {
                       <Mail className="h-6 w-6 text-accent-foreground" />
                     </div>
                     <div>
-                      <p className="font-medium">Paste an email to get started</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Or try a sample below</p>
+                      <p className="font-medium">Find your subscriptions</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Scan your inbox or paste a single email below
+                      </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => send(SAMPLE)}>
-                      Try sample email
+                    <Button
+                      size="sm"
+                      onClick={() => setScanOpen(true)}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      <Inbox className="mr-2 h-4 w-4" />
+                      Scan your mails
                     </Button>
                   </div>
                 )}
@@ -336,6 +388,78 @@ const Index = () => {
           </Card>
         </div>
       </div>
+
+      <Dialog open={scanOpen} onOpenChange={setScanOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Scan your Gmail inbox</DialogTitle>
+            <DialogDescription>
+              We'll scan up to 50 recent emails for subscription signals (trials, receipts,
+              renewals) and save them to your account. You need a Google OAuth access token with
+              the <code className="rounded bg-muted px-1 py-0.5 text-xs">gmail.readonly</code>{" "}
+              scope.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="mb-2 font-medium text-foreground">Quick way to get a token:</p>
+              <ol className="ml-4 list-decimal space-y-1">
+                <li>
+                  Open the{" "}
+                  <a
+                    href="https://developers.google.com/oauthplayground/#step1&apisSelect=https%3A//www.googleapis.com/auth/gmail.readonly"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                  >
+                    Google OAuth Playground <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+                <li>
+                  Select <strong>Gmail API v1 → gmail.readonly</strong>, then{" "}
+                  <strong>Authorize APIs</strong>
+                </li>
+                <li>
+                  Click <strong>Exchange authorization code for tokens</strong>
+                </li>
+                <li>
+                  Copy the <strong>access_token</strong> and paste it below
+                </li>
+              </ol>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground">Gmail access token</label>
+              <Input
+                type="password"
+                value={gmailToken}
+                onChange={(e) => setGmailToken(e.target.value)}
+                placeholder="ya29...."
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setScanOpen(false)} disabled={scanning}>
+              Cancel
+            </Button>
+            <Button
+              onClick={scanInbox}
+              disabled={scanning || !gmailToken.trim()}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              {scanning ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Inbox className="mr-2 h-4 w-4" />
+              )}
+              {scanning ? "Scanning..." : "Start scan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
