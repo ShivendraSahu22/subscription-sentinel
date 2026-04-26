@@ -252,11 +252,18 @@ const Index = () => {
                       <Mail className="h-6 w-6 text-accent-foreground" />
                     </div>
                     <div>
-                      <p className="font-medium">Paste an email to get started</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Or try a sample below</p>
+                      <p className="font-medium">Find your subscriptions</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Scan your inbox or paste a single email below
+                      </p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => send(SAMPLE)}>
-                      Try sample email
+                    <Button
+                      size="sm"
+                      onClick={() => setScanOpen(true)}
+                      className="bg-gradient-primary hover:opacity-90"
+                    >
+                      <Inbox className="mr-2 h-4 w-4" />
+                      Scan your mails
                     </Button>
                   </div>
                 )}
