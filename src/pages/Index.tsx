@@ -162,6 +162,41 @@ const Index = () => {
 
   const clearChat = () => setMessages([]);
 
+  const scanInbox = async () => {
+    const token = gmailToken.trim();
+    if (!token) {
+      toast({
+        title: "Gmail access token required",
+        description: "Paste a Google OAuth access token with gmail.readonly scope.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setScanning(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("scan-emails", {
+        body: { provider_token: token, max_emails: 50 },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({
+        title: "Scan complete",
+        description: `Scanned ${data.scanned ?? 0} emails — found ${data.found ?? 0} subscription${data.found === 1 ? "" : "s"}.`,
+      });
+      setScanOpen(false);
+      setGmailToken("");
+      loadAll();
+    } catch (e) {
+      toast({
+        title: "Scan failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setScanning(false);
+    }
+  };
+
   const reminderFor = (classificationId: string, type: ReminderType) =>
     reminders.find((r) => r.classification_id === classificationId && r.type === type);
   const decisionFor = (classificationId: string) =>
