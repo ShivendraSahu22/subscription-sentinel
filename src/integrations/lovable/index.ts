@@ -7,6 +7,7 @@ const lovableAuth = createLovableAuth();
 type SignInOptions = {
   redirect_uri?: string;
   extraParams?: Record<string, string>;
+  scopes?: string;
 };
 
 export const lovable = {
