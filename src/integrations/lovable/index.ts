@@ -15,6 +15,7 @@ export const lovable = {
     signInWithOAuth: async (provider: "google" | "apple" | "microsoft", opts?: SignInOptions) => {
       const result = await lovableAuth.signInWithOAuth(provider, {
         redirect_uri: opts?.redirect_uri,
+        scopes: opts?.scopes,
         extraParams: {
           ...opts?.extraParams,
         },
