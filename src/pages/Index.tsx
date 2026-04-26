@@ -388,6 +388,78 @@ const Index = () => {
           </Card>
         </div>
       </div>
+
+      <Dialog open={scanOpen} onOpenChange={setScanOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Scan your Gmail inbox</DialogTitle>
+            <DialogDescription>
+              We'll scan up to 50 recent emails for subscription signals (trials, receipts,
+              renewals) and save them to your account. You need a Google OAuth access token with
+              the <code className="rounded bg-muted px-1 py-0.5 text-xs">gmail.readonly</code>{" "}
+              scope.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
+              <p className="mb-2 font-medium text-foreground">Quick way to get a token:</p>
+              <ol className="ml-4 list-decimal space-y-1">
+                <li>
+                  Open the{" "}
+                  <a
+                    href="https://developers.google.com/oauthplayground/#step1&apisSelect=https%3A//www.googleapis.com/auth/gmail.readonly"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                  >
+                    Google OAuth Playground <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+                <li>
+                  Select <strong>Gmail API v1 → gmail.readonly</strong>, then{" "}
+                  <strong>Authorize APIs</strong>
+                </li>
+                <li>
+                  Click <strong>Exchange authorization code for tokens</strong>
+                </li>
+                <li>
+                  Copy the <strong>access_token</strong> and paste it below
+                </li>
+              </ol>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground">Gmail access token</label>
+              <Input
+                type="password"
+                value={gmailToken}
+                onChange={(e) => setGmailToken(e.target.value)}
+                placeholder="ya29...."
+                className="mt-1 font-mono text-xs"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setScanOpen(false)} disabled={scanning}>
+              Cancel
+            </Button>
+            <Button
+              onClick={scanInbox}
+              disabled={scanning || !gmailToken.trim()}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              {scanning ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Inbox className="mr-2 h-4 w-4" />
+              )}
+              {scanning ? "Scanning..." : "Start scan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
