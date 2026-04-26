@@ -7,7 +7,6 @@ const lovableAuth = createLovableAuth();
 type SignInOptions = {
   redirect_uri?: string;
   extraParams?: Record<string, string>;
-  scopes?: string;
 };
 
 export const lovable = {
@@ -15,7 +14,6 @@ export const lovable = {
     signInWithOAuth: async (provider: "google" | "apple" | "microsoft", opts?: SignInOptions) => {
       const result = await lovableAuth.signInWithOAuth(provider, {
         redirect_uri: opts?.redirect_uri,
-        scopes: opts?.scopes,
         extraParams: {
           ...opts?.extraParams,
         },
