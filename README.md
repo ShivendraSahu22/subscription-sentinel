@@ -1,7 +1,6 @@
 # 🛡️ Subscription Sentinel — AI-Powered Free Trial & Subscription Guardian
 
-# Link : - #ya29.a0Aa7MYirZlcCwvIYgS9d05GVGix4nocOobYBE2nOucaNIUqKW0DvT2jGroCONh8Uo1-WullYEp86QyVLtIDG6f-44JUpsx7gXoFkLvg7dIGSl5EmL-DyHUvYOUaFZR2iMPnuzQqq24TALDaDNoXHKIvmD6-qtKFWhLsa1sgCCbDzJRGkkH_W2t3dffw5l3HOq6gMX7OIaCgYKAQMSARMSFQHGX2Mi6cyfk1XtWEGeRUmEs-Jg7Q0206
-
+# Link : - #https://trisai.lovable.app/#
 ## 🚀 Introduction
 
 **Subscription Sentinel** is an AI-powered financial assistant designed to help users **track, manage, and prevent unwanted subscription charges**.
