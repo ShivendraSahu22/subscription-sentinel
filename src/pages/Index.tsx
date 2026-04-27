@@ -84,7 +84,7 @@ const categoryStyles: Record<string, string> = {
 };
 
 const Index = () => {
-  const { user, signOut } = useAuth();
+  const { user, session, signOut } = useAuth();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [history, setHistory] = useState<SavedRow[]>([]);
@@ -92,8 +92,6 @@ const Index = () => {
   const [decisions, setDecisions] = useState<DecisionRow[]>([]);
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [scanOpen, setScanOpen] = useState(false);
-  const [gmailToken, setGmailToken] = useState("");
   const [scanning, setScanning] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
