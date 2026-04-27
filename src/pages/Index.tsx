@@ -26,16 +26,7 @@ import {
   Scissors,
   LogOut,
   Inbox,
-  ExternalLink,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 
 type Classification = {
