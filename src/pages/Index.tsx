@@ -171,14 +171,13 @@ const Index = () => {
     }
   };
 
+  const hasGmailToken = !!session?.provider_token;
+
   const scanInbox = async () => {
     const token = session?.provider_token;
     if (!token) {
-      toast({
-        title: "Gmail access needed",
-        description: "Reconnect with Google to grant Gmail read access.",
-        variant: "destructive",
-      });
+      // No token in session — trigger reconnect directly from this click
+      // (browsers allow popups only when triggered by user gesture)
       await reconnectGmail();
       return;
     }
@@ -192,9 +191,9 @@ const Index = () => {
         if (data.code === "NO_TOKEN" || data.code === "AUTH_FAILED") {
           toast({
             title: "Gmail access expired",
-            description: "Reconnecting with Google...",
+            description: "Click Connect Gmail to sign in again.",
+            variant: "destructive",
           });
-          await reconnectGmail();
           return;
         }
         throw new Error(data.error);
