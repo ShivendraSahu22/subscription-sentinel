@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -167,19 +166,21 @@ const Index = () => {
   const clearChat = () => setMessages([]);
 
   const reconnectGmail = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-      extraParams: {
-        scope:
-          "openid email profile https://www.googleapis.com/auth/gmail.readonly",
-        access_type: "offline",
-        prompt: "consent",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+        scopes: "https://www.googleapis.com/auth/gmail.readonly",
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
-    if (result.error) {
+    if (error) {
       toast({
         title: "Google sign-in failed",
-        description: result.error.message ?? "Unknown error",
+        description: error.message ?? "Unknown error",
         variant: "destructive",
       });
     }
