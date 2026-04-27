@@ -279,7 +279,9 @@ const Index = () => {
                     <div>
                       <p className="font-medium">Find your subscriptions</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Scan your inbox or paste a single email below
+                        {hasGmailToken
+                          ? "Scan your inbox or paste a single email below"
+                          : "Connect your Gmail to scan, or paste a single email below"}
                       </p>
                     </div>
                     <Button
@@ -293,7 +295,7 @@ const Index = () => {
                       ) : (
                         <Inbox className="mr-2 h-4 w-4" />
                       )}
-                      {scanning ? "Scanning..." : "Scan your mails"}
+                      {scanning ? "Scanning..." : hasGmailToken ? "Scan your mails" : "Connect Gmail"}
                     </Button>
                   </div>
                 )}
