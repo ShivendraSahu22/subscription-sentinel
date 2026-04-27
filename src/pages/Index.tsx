@@ -294,11 +294,16 @@ const Index = () => {
                     </div>
                     <Button
                       size="sm"
-                      onClick={() => setScanOpen(true)}
+                      onClick={scanInbox}
+                      disabled={scanning}
                       className="bg-gradient-primary hover:opacity-90"
                     >
-                      <Inbox className="mr-2 h-4 w-4" />
-                      Scan your mails
+                      {scanning ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Inbox className="mr-2 h-4 w-4" />
+                      )}
+                      {scanning ? "Scanning..." : "Scan your mails"}
                     </Button>
                   </div>
                 )}
