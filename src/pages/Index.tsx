@@ -108,6 +108,20 @@ const Index = () => {
     loadAll();
   }, []);
 
+  // Auto-scan inbox once per user after sign-in when a Gmail token is available
+  const autoScanTriedRef = useRef(false);
+  useEffect(() => {
+    if (autoScanTriedRef.current) return;
+    if (!user?.id || !session?.provider_token || scanning) return;
+    const flagKey = `auto_scan_done:${user.id}`;
+    if (sessionStorage.getItem(flagKey)) return;
+    autoScanTriedRef.current = true;
+    sessionStorage.setItem(flagKey, "1");
+    // Fire-and-forget; scanInbox handles its own toasts/state
+    scanInbox();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, session?.provider_token]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
