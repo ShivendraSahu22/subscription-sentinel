@@ -61,6 +61,12 @@ const Auth = () => {
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
+        extraParams: {
+          scope:
+            "openid email profile https://www.googleapis.com/auth/gmail.readonly",
+          access_type: "offline",
+          prompt: "consent",
+        },
       });
       if (result.error) {
         toast({
