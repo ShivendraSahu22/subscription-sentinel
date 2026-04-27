@@ -232,7 +232,7 @@ const Index = () => {
               ) : (
                 <Inbox className="mr-1.5 h-3.5 w-3.5" />
               )}
-              {scanning ? "Scanning..." : "Scan mails"}
+              {scanning ? "Scanning..." : hasGmailToken ? "Scan mails" : "Connect Gmail"}
             </Button>
             <span className="text-xs text-muted-foreground">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
