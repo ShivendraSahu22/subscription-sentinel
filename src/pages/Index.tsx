@@ -236,8 +236,13 @@ const Index = () => {
       <div className="container max-w-6xl py-8">
         <header className="mb-8 text-center">
           <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setScanOpen(true)}>
-              <Inbox className="mr-1.5 h-3.5 w-3.5" /> Scan mails
+            <Button variant="outline" size="sm" onClick={scanInbox} disabled={scanning}>
+              {scanning ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Inbox className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              {scanning ? "Scanning..." : "Scan mails"}
             </Button>
             <span className="text-xs text-muted-foreground">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
