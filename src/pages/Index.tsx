@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -123,7 +122,7 @@ const Index = () => {
   }, [user?.id, session?.provider_token]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, loading]);
 
   const send = async (text?: string) => {
@@ -167,19 +166,21 @@ const Index = () => {
   const clearChat = () => setMessages([]);
 
   const reconnectGmail = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-      extraParams: {
-        scope:
-          "openid email profile https://www.googleapis.com/auth/gmail.readonly",
-        access_type: "offline",
-        prompt: "consent",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+        scopes: "https://www.googleapis.com/auth/gmail.readonly",
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
-    if (result.error) {
+    if (error) {
       toast({
         title: "Google sign-in failed",
-        description: result.error.message ?? "Unknown error",
+        description: error.message ?? "Unknown error",
         variant: "destructive",
       });
     }
@@ -283,7 +284,7 @@ const Index = () => {
               </Button>
             </div>
 
-            <ScrollArea className="flex-1" ref={scrollRef as never}>
+            <ScrollArea className="flex-1">
               <div className="space-y-4 p-5">
                 {messages.length === 0 && (
                   <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
@@ -355,6 +356,7 @@ const Index = () => {
                     </div>
                   </div>
                 )}
+                <div ref={scrollRef} />
               </div>
             </ScrollArea>
 
