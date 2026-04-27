@@ -161,14 +161,34 @@ const Index = () => {
 
   const clearChat = () => setMessages([]);
 
-  const scanInbox = async () => {
-    const token = gmailToken.trim();
-    if (!token) {
+  const reconnectGmail = async () => {
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+      extraParams: {
+        scope:
+          "openid email profile https://www.googleapis.com/auth/gmail.readonly",
+        access_type: "offline",
+        prompt: "consent",
+      },
+    });
+    if (result.error) {
       toast({
-        title: "Gmail access token required",
-        description: "Paste a Google OAuth access token with gmail.readonly scope.",
+        title: "Google sign-in failed",
+        description: result.error.message ?? "Unknown error",
         variant: "destructive",
       });
+    }
+  };
+
+  const scanInbox = async () => {
+    const token = session?.provider_token;
+    if (!token) {
+      toast({
+        title: "Gmail access needed",
+        description: "Reconnect with Google to grant Gmail read access.",
+        variant: "destructive",
+      });
+      await reconnectGmail();
       return;
     }
     setScanning(true);
@@ -177,13 +197,21 @@ const Index = () => {
         body: { provider_token: token, max_emails: 50 },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        if (data.code === "NO_TOKEN" || data.code === "AUTH_FAILED") {
+          toast({
+            title: "Gmail access expired",
+            description: "Reconnecting with Google...",
+          });
+          await reconnectGmail();
+          return;
+        }
+        throw new Error(data.error);
+      }
       toast({
         title: "Scan complete",
         description: `Scanned ${data.scanned ?? 0} emails — found ${data.found ?? 0} subscription${data.found === 1 ? "" : "s"}.`,
       });
-      setScanOpen(false);
-      setGmailToken("");
       loadAll();
     } catch (e) {
       toast({
