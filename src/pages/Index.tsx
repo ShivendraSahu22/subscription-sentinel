@@ -171,14 +171,13 @@ const Index = () => {
     }
   };
 
+  const hasGmailToken = !!session?.provider_token;
+
   const scanInbox = async () => {
     const token = session?.provider_token;
     if (!token) {
-      toast({
-        title: "Gmail access needed",
-        description: "Reconnect with Google to grant Gmail read access.",
-        variant: "destructive",
-      });
+      // No token in session — trigger reconnect directly from this click
+      // (browsers allow popups only when triggered by user gesture)
       await reconnectGmail();
       return;
     }
@@ -192,9 +191,9 @@ const Index = () => {
         if (data.code === "NO_TOKEN" || data.code === "AUTH_FAILED") {
           toast({
             title: "Gmail access expired",
-            description: "Reconnecting with Google...",
+            description: "Click Connect Gmail to sign in again.",
+            variant: "destructive",
           });
-          await reconnectGmail();
           return;
         }
         throw new Error(data.error);
@@ -233,7 +232,7 @@ const Index = () => {
               ) : (
                 <Inbox className="mr-1.5 h-3.5 w-3.5" />
               )}
-              {scanning ? "Scanning..." : "Scan mails"}
+              {scanning ? "Scanning..." : hasGmailToken ? "Scan mails" : "Connect Gmail"}
             </Button>
             <span className="text-xs text-muted-foreground">{user?.email}</span>
             <Button variant="ghost" size="sm" onClick={signOut}>
@@ -280,7 +279,9 @@ const Index = () => {
                     <div>
                       <p className="font-medium">Find your subscriptions</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Scan your inbox or paste a single email below
+                        {hasGmailToken
+                          ? "Scan your inbox or paste a single email below"
+                          : "Connect your Gmail to scan, or paste a single email below"}
                       </p>
                     </div>
                     <Button
@@ -294,7 +295,7 @@ const Index = () => {
                       ) : (
                         <Inbox className="mr-2 h-4 w-4" />
                       )}
-                      {scanning ? "Scanning..." : "Scan your mails"}
+                      {scanning ? "Scanning..." : hasGmailToken ? "Scan your mails" : "Connect Gmail"}
                     </Button>
                   </div>
                 )}
