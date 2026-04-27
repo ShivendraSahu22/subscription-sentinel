@@ -122,7 +122,7 @@ const Index = () => {
   }, [user?.id, session?.provider_token]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, loading]);
 
   const send = async (text?: string) => {
@@ -284,7 +284,7 @@ const Index = () => {
               </Button>
             </div>
 
-            <ScrollArea className="flex-1" ref={scrollRef as never}>
+            <ScrollArea className="flex-1">
               <div className="space-y-4 p-5">
                 {messages.length === 0 && (
                   <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
@@ -356,6 +356,7 @@ const Index = () => {
                     </div>
                   </div>
                 )}
+                <div ref={scrollRef} />
               </div>
             </ScrollArea>
 
