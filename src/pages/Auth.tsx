@@ -59,26 +59,26 @@ const Auth = () => {
   const google = async () => {
     setBusy(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-        extraParams: {
-          scope:
-            "openid email profile https://www.googleapis.com/auth/gmail.readonly",
-          access_type: "offline",
-          prompt: "consent",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+          scopes: "https://www.googleapis.com/auth/gmail.readonly",
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
       });
-      if (result.error) {
+      if (error) {
         toast({
           title: "Google sign-in failed",
-          description: result.error.message ?? "Unknown error",
+          description: error.message ?? "Unknown error",
           variant: "destructive",
         });
         setBusy(false);
         return;
       }
-      if (result.redirected) return;
-      navigate("/", { replace: true });
     } catch (err) {
       toast({
         title: "Google sign-in failed",
