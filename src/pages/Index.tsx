@@ -219,6 +219,23 @@ const Index = () => {
     }
   };
 
+  // User-facing scan entry: requires email OTP verification first.
+  const requestScan = async () => {
+    if (!session?.provider_token) {
+      await reconnectGmail();
+      return;
+    }
+    if (!user?.email) {
+      toast({
+        title: "Missing email",
+        description: "We couldn't find your email to send a verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setOtpOpen(true);
+  };
+
   const reminderFor = (classificationId: string, type: ReminderType) =>
     reminders.find((r) => r.classification_id === classificationId && r.type === type);
   const decisionFor = (classificationId: string) =>
