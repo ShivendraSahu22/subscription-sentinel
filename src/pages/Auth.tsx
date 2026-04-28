@@ -16,6 +16,24 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Clear any stale/corrupt session tokens that cause "Invalid Refresh Token" errors.
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error || (data.session && !data.session.user)) {
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // ignore
+        }
+        // Remove any leftover sb-* keys in localStorage just in case.
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("sb-"))
+          .forEach((k) => localStorage.removeItem(k));
+      }
+    })();
+  }, []);
+
   if (authLoading) {
     return (
       <div className="grid min-h-screen place-items-center bg-gradient-subtle">
