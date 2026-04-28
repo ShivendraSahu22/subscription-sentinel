@@ -308,7 +308,7 @@ const Index = () => {
                     </div>
                     <Button
                       size="sm"
-                      onClick={scanInbox}
+                      onClick={requestScan}
                       disabled={scanning}
                       className="bg-gradient-primary hover:opacity-90"
                     >
