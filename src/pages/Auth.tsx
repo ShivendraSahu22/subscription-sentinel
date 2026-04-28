@@ -44,6 +44,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Clear any stale/corrupt session tokens that cause "Invalid Refresh Token" errors.
   useEffect(() => {
