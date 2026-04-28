@@ -5,8 +5,37 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Loader2, Mail } from "lucide-react";
+import { Sparkles, Loader2, Mail, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+
+/** Map raw Supabase auth errors to friendly, actionable messages. */
+const friendlyAuthError = (raw: string, mode: "signin" | "signup"): string => {
+  const m = raw.toLowerCase();
+  if (m.includes("invalid login credentials") || m.includes("invalid_grant"))
+    return "That email and password don't match. Double-check them, or use \"Forgot password\" if you've lost it.";
+  if (m.includes("email not confirmed") || m.includes("not confirmed"))
+    return "Your email isn't confirmed yet. Check your inbox (and spam) for the confirmation link.";
+  if (m.includes("user already registered") || m.includes("already exists") || m.includes("already registered"))
+    return "An account with this email already exists. Try signing in instead.";
+  if (m.includes("user not found"))
+    return "We couldn't find an account for this email. Create one to get started.";
+  if (m.includes("password") && (m.includes("short") || m.includes("characters") || m.includes("weak")))
+    return "Password is too weak. Use at least 6 characters with a mix of letters and numbers.";
+  if (m.includes("rate") || m.includes("too many") || m.includes("retry"))
+    return "Too many attempts. Please wait a minute and try again.";
+  if (m.includes("network") || m.includes("failed to fetch") || m.includes("fetch"))
+    return "Network error. Check your connection and try again.";
+  if (m.includes("signups not allowed") || m.includes("signup is disabled"))
+    return "New sign-ups are currently disabled. Contact support if you need an account.";
+  if (m.includes("popup") && m.includes("closed"))
+    return "The sign-in window was closed before finishing. Please try again.";
+  if (m.includes("provider is not enabled"))
+    return "Google sign-in isn't configured. Please use email and password instead.";
+  return mode === "signup"
+    ? "We couldn't create your account. Please try again."
+    : "We couldn't sign you in. Please try again.";
+};
+
 
 const Auth = () => {
   const { user, loading: authLoading } = useAuth();
