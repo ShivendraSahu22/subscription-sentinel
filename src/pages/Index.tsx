@@ -887,6 +887,12 @@ const SummaryPanel = ({ historyCount }: { historyCount: number }) => {
           Summarize my subscriptions
         </Button>
       )}
+      <ScanOtpDialog
+        open={otpOpen}
+        email={user?.email ?? ""}
+        onOpenChange={setOtpOpen}
+        onVerified={scanInbox}
+      />
     </div>
   );
 };
