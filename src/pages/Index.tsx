@@ -293,34 +293,7 @@ const Index = () => {
 
             <ScrollArea className="flex-1">
               <div className="space-y-4 p-5">
-                {messages.length === 0 && (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent">
-                      <Mail className="h-6 w-6 text-accent-foreground" />
-                    </div>
-                    <div>
-                      <p className="font-medium">Find your subscriptions</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {hasGmailToken
-                          ? "Scan your inbox or paste a single email below"
-                          : "Connect your Gmail to scan, or paste a single email below"}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={requestScan}
-                      disabled={scanning}
-                      className="bg-gradient-primary hover:opacity-90"
-                    >
-                      {scanning ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Inbox className="mr-2 h-4 w-4" />
-                      )}
-                      {scanning ? "Scanning..." : hasGmailToken ? "Scan your mails" : "Connect Gmail"}
-                    </Button>
-                  </div>
-                )}
+                {messages.length === 0 && null}
 
                 {messages.map((m) =>
                   m.role === "user" ? (
