@@ -27,6 +27,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ScanOtpDialog } from "@/components/ScanOtpDialog";
 
 type Classification = {
   id: string;
@@ -84,6 +85,7 @@ const Index = () => {
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [otpOpen, setOtpOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadAll = async () => {
@@ -107,19 +109,7 @@ const Index = () => {
     loadAll();
   }, []);
 
-  // Auto-scan inbox once per user after sign-in when a Gmail token is available
-  const autoScanTriedRef = useRef(false);
-  useEffect(() => {
-    if (autoScanTriedRef.current) return;
-    if (!user?.id || !session?.provider_token || scanning) return;
-    const flagKey = `auto_scan_done:${user.id}`;
-    if (sessionStorage.getItem(flagKey)) return;
-    autoScanTriedRef.current = true;
-    sessionStorage.setItem(flagKey, "1");
-    // Fire-and-forget; scanInbox handles its own toasts/state
-    scanInbox();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, session?.provider_token]);
+  // Scans require explicit email-OTP verification; no auto-scan.
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -229,6 +219,23 @@ const Index = () => {
     }
   };
 
+  // User-facing scan entry: requires email OTP verification first.
+  const requestScan = async () => {
+    if (!session?.provider_token) {
+      await reconnectGmail();
+      return;
+    }
+    if (!user?.email) {
+      toast({
+        title: "Missing email",
+        description: "We couldn't find your email to send a verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setOtpOpen(true);
+  };
+
   const reminderFor = (classificationId: string, type: ReminderType) =>
     reminders.find((r) => r.classification_id === classificationId && r.type === type);
   const decisionFor = (classificationId: string) =>
@@ -241,7 +248,7 @@ const Index = () => {
       <div className="container max-w-6xl py-8">
         <header className="mb-8 text-center">
           <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={scanInbox} disabled={scanning}>
+            <Button variant="outline" size="sm" onClick={requestScan} disabled={scanning}>
               {scanning ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
@@ -301,7 +308,7 @@ const Index = () => {
                     </div>
                     <Button
                       size="sm"
-                      onClick={scanInbox}
+                      onClick={requestScan}
                       disabled={scanning}
                       className="bg-gradient-primary hover:opacity-90"
                     >
@@ -434,6 +441,12 @@ const Index = () => {
         </div>
       </div>
 
+      <ScanOtpDialog
+        open={otpOpen}
+        email={user?.email ?? ""}
+        onOpenChange={setOtpOpen}
+        onVerified={scanInbox}
+      />
     </div>
   );
 };
