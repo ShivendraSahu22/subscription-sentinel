@@ -248,7 +248,7 @@ const Index = () => {
       <div className="container max-w-6xl py-8">
         <header className="mb-8 text-center">
           <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={scanInbox} disabled={scanning}>
+            <Button variant="outline" size="sm" onClick={requestScan} disabled={scanning}>
               {scanning ? (
                 <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
               ) : (
