@@ -27,6 +27,7 @@ import {
   Inbox,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ScanOtpDialog } from "@/components/ScanOtpDialog";
 
 type Classification = {
   id: string;
