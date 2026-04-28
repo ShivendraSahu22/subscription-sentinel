@@ -247,7 +247,10 @@ const Auth = () => {
           <button
             type="button"
             className="font-medium text-primary hover:underline"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+            onClick={() => {
+              setMode(mode === "signin" ? "signup" : "signin");
+              setFormError(null);
+            }}
           >
             {mode === "signin" ? "Create an account" : "Sign in"}
           </button>
