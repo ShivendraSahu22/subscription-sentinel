@@ -441,6 +441,12 @@ const Index = () => {
         </div>
       </div>
 
+      <ScanOtpDialog
+        open={otpOpen}
+        email={user?.email ?? ""}
+        onOpenChange={setOtpOpen}
+        onVerified={scanInbox}
+      />
     </div>
   );
 };
