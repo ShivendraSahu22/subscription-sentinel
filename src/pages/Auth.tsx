@@ -75,7 +75,11 @@ const Auth = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    setFormError(null);
+    if (!email || !password) {
+      setFormError("Please enter your email and password.");
+      return;
+    }
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -93,17 +97,15 @@ const Auth = () => {
         navigate("/", { replace: true });
       }
     } catch (err) {
-      toast({
-        title: mode === "signup" ? "Sign-up failed" : "Sign-in failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      const raw = err instanceof Error ? err.message : "Unknown error";
+      setFormError(friendlyAuthError(raw, mode));
     } finally {
       setBusy(false);
     }
   };
 
   const google = async () => {
+    setFormError(null);
     setBusy(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
@@ -118,20 +120,13 @@ const Auth = () => {
         },
       });
       if (error) {
-        toast({
-          title: "Google sign-in failed",
-          description: error.message ?? "Unknown error",
-          variant: "destructive",
-        });
+        setFormError(friendlyAuthError(error.message ?? "", "signin"));
         setBusy(false);
         return;
       }
     } catch (err) {
-      toast({
-        title: "Google sign-in failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        variant: "destructive",
-      });
+      const raw = err instanceof Error ? err.message : "Unknown error";
+      setFormError(friendlyAuthError(raw, "signin"));
       setBusy(false);
     }
   };
