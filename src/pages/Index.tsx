@@ -85,6 +85,7 @@ const Index = () => {
   const [suggestions, setSuggestions] = useState<SuggestionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [otpOpen, setOtpOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadAll = async () => {
