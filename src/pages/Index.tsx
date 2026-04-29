@@ -420,12 +420,22 @@ const Index = () => {
                     className="rounded-lg border border-border/60 bg-background p-3 transition-shadow hover:shadow-soft"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] ${categoryStyles[h.category] ?? ""}`}
-                      >
-                        {h.category}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${categoryStyles[h.category] ?? ""}`}
+                        >
+                          {h.category}
+                        </Badge>
+                        {h.priority && (
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${priorityStyles[h.priority]}`}
+                          >
+                            {h.priority}
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-[10px] text-muted-foreground">
                         {new Date(h.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
