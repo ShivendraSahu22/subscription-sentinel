@@ -593,13 +593,8 @@ const ResultCard = ({
           </a>
         </div>
       )}
-            <div key={f.label}>
-              <p className="text-xs text-muted-foreground">{f.label}</p>
-              <p className="text-sm font-medium">{f.value}</p>
-            </div>
-          ))}
-        </div>
-      )}
+
+
 
       {canRemind && (
         <div className="space-y-2 border-t border-border/60 pt-3">
