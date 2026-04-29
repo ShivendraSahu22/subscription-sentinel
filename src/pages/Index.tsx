@@ -74,6 +74,7 @@ type SavedRow = Classification & {
   created_at: string;
 };
 
+
 type ReminderType = "upcoming" | "last_day";
 type ReminderRow = { id: string; classification_id: string; type: ReminderType; message: string };
 type DecisionRow = {
