@@ -533,18 +533,66 @@ const ResultCard = ({
 
   return (
     <div className="max-w-[85%] space-y-3 rounded-2xl rounded-tl-sm border border-border/60 bg-card p-4 shadow-soft">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Category
-        </p>
-        <Badge variant="outline" className={`mt-1 ${categoryStyles[result.category] ?? ""}`}>
-          {result.category}
-        </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Category
+          </p>
+          <Badge variant="outline" className={`mt-1 ${categoryStyles[result.category] ?? ""}`}>
+            {result.category}
+          </Badge>
+        </div>
+        {result.priority && (
+          <div className="text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Priority
+            </p>
+            <Badge variant="outline" className={`mt-1 ${priorityStyles[result.priority]}`}>
+              {result.priority}
+            </Badge>
+          </div>
+        )}
       </div>
+
+      {result.risk_signals && result.risk_signals.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-3">
+          {result.risk_signals.map((s) => (
+            <Badge
+              key={s}
+              variant="outline"
+              className="border-warning/30 bg-warning/10 text-[10px] text-warning"
+            >
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              {riskSignalLabels[s] ?? s}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {fields.length > 0 && (
         <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3">
           {fields.map((f) => (
+            <div key={f.label}>
+              <p className="text-xs text-muted-foreground">{f.label}</p>
+              <p className="text-sm font-medium">{f.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {result.cancellation_link && (
+        <div className="border-t border-border/60 pt-3">
+          <p className="text-xs text-muted-foreground">Cancellation link</p>
+          <a
+            href={result.cancellation_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 block break-all text-sm text-primary underline-offset-2 hover:underline"
+          >
+            {result.cancellation_link}
+          </a>
+        </div>
+      )}
             <div key={f.label}>
               <p className="text-xs text-muted-foreground">{f.label}</p>
               <p className="text-sm font-medium">{f.value}</p>
