@@ -495,12 +495,15 @@ const ResultCard = ({
 
   const fields: { label: string; value: string }[] = [
     { label: "Service", value: result.service_name ?? "" },
+    { label: "Type", value: result.subscription_type ?? "" },
     { label: "Trial ends", value: result.trial_end_date ?? "" },
+    { label: "Next billing", value: result.next_billing_date ?? "" },
     {
       label: "Amount",
       value: [result.amount, result.currency].filter(Boolean).join(" "),
     },
     { label: "Frequency", value: result.frequency ?? "" },
+    { label: "Sender", value: result.sender_email ?? "" },
   ].filter((f) => f.value);
 
   const canRemind =
