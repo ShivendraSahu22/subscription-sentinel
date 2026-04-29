@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +30,8 @@ const friendlyAuthError = (raw: string, mode: "signin" | "signup"): string => {
     return "New sign-ups are currently disabled. Contact support if you need an account.";
   if (m.includes("popup") && m.includes("closed"))
     return "The sign-in window was closed before finishing. Please try again.";
-  if (m.includes("provider is not enabled"))
-    return "Google sign-in isn't configured. Please use email and password instead.";
+  if (m.includes("provider is not enabled") || m.includes("oauth") || m.includes("unsupported provider"))
+    return "Google sign-in couldn't start. Please try again, or use email and password instead.";
   return mode === "signup"
     ? "We couldn't create your account. Please try again."
     : "We couldn't sign you in. Please try again.";
@@ -108,22 +109,23 @@ const Auth = () => {
     setFormError(null);
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-          scopes: "https://www.googleapis.com/auth/gmail.readonly",
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: {
+          prompt: "consent",
         },
       });
-      if (error) {
-        setFormError(friendlyAuthError(error.message ?? "", "signin"));
+
+      if (result.error) {
+        const message = result.error instanceof Error ? result.error.message : String(result.error);
+        setFormError(friendlyAuthError(message, "signin"));
         setBusy(false);
         return;
       }
+
+      if (result.redirected) return;
+
+      navigate("/", { replace: true });
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Unknown error";
       setFormError(friendlyAuthError(raw, "signin"));
