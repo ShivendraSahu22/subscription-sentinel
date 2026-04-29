@@ -147,6 +147,33 @@ export type Database = {
           },
         ]
       }
+      google_tokens: {
+        Row: {
+          access_token_enc: string
+          expires_at: string
+          refresh_token_enc: string | null
+          scope: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_enc: string
+          expires_at: string
+          refresh_token_enc?: string | null
+          scope?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_enc?: string
+          expires_at?: string
+          refresh_token_enc?: string | null
+          scope?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       reminders: {
         Row: {
           classification_id: string
@@ -211,7 +238,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_google_token: {
+        Args: { p_secret: string; p_user_id: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          refresh_token: string
+          scope: string
+        }[]
+      }
+      list_users_with_refresh_token: {
+        Args: { p_secret: string }
+        Returns: {
+          access_token: string
+          expires_at: string
+          refresh_token: string
+          user_id: string
+        }[]
+      }
+      upsert_google_token: {
+        Args: {
+          p_access_token: string
+          p_expires_at: string
+          p_refresh_token: string
+          p_scope: string
+          p_secret: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
