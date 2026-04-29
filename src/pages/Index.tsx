@@ -29,14 +29,40 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { ScanOtpDialog } from "@/components/ScanOtpDialog";
 
+type Priority = "HIGH" | "MEDIUM" | "LOW";
+type RiskSignal =
+  | "price_increase"
+  | "auto_renewal_warning"
+  | "trial_ending_urgency"
+  | "failed_payment";
+
 type Classification = {
   id: string;
   category: string;
   service_name: string | null;
+  subscription_type: string | null;
   trial_end_date: string | null;
+  next_billing_date: string | null;
   amount: string | null;
   currency: string | null;
   frequency: string | null;
+  cancellation_link: string | null;
+  sender_email: string | null;
+  priority: Priority | null;
+  risk_signals: RiskSignal[] | null;
+};
+
+const priorityStyles: Record<Priority, string> = {
+  HIGH: "bg-destructive/10 text-destructive border-destructive/30",
+  MEDIUM: "bg-warning/10 text-warning border-warning/30",
+  LOW: "bg-muted text-muted-foreground border-border",
+};
+
+const riskSignalLabels: Record<RiskSignal, string> = {
+  price_increase: "Price increase",
+  auto_renewal_warning: "Auto-renewal warning",
+  trial_ending_urgency: "Trial ending soon",
+  failed_payment: "Failed payment",
 };
 
 type Message =
@@ -135,10 +161,16 @@ const Index = () => {
         id: data.id,
         category: data.category,
         service_name: data.service_name || null,
+        subscription_type: data.subscription_type || null,
         trial_end_date: data.trial_end_date || null,
+        next_billing_date: data.next_billing_date || null,
         amount: data.amount || null,
         currency: data.currency || null,
         frequency: data.frequency || null,
+        cancellation_link: data.cancellation_link || null,
+        sender_email: data.sender_email || null,
+        priority: (data.priority as Priority) || null,
+        risk_signals: Array.isArray(data.risk_signals) ? (data.risk_signals as RiskSignal[]) : null,
       };
       setMessages((m) => [...m, { role: "assistant", result, id: crypto.randomUUID() }]);
       loadAll();
