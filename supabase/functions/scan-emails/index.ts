@@ -13,12 +13,20 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const SYSTEM_PROMPT = `You are an AI assistant that detects subscription-related emails.
+const SYSTEM_PROMPT = `You are an AI assistant that detects whether an email is related to a subscription, SaaS, OTT, mobile app, or any recurring billing.
 
 Classify into: FREE_TRIAL_STARTED, TRIAL_ENDING_SOON, PAYMENT_CONFIRMED, SUBSCRIPTION_RENEWAL, NOT_RELEVANT
 
-Extract: service_name, trial_end_date, amount, currency, frequency (monthly/yearly).
-Use empty string for unknown fields.`;
+Extract: service_name, subscription_type (trial/paid), amount, currency, frequency (monthly/yearly), next_billing_date (YYYY-MM-DD), trial_end_date (YYYY-MM-DD), cancellation_link (URL if present), sender_email (From address).
+
+Detect risk_signals from: price_increase, auto_renewal_warning, trial_ending_urgency, failed_payment.
+
+Assign priority:
+- HIGH: payment/renewal within 3 days, or failed payment
+- MEDIUM: trial ending soon, price change
+- LOW: informational
+
+Use empty string for unknown text fields and empty array for no signals.`;
 
 const SUBSCRIPTION_QUERY =
   'newer_than:365d (subscription OR receipt OR invoice OR "free trial" OR "trial ends" OR "renews" OR "payment confirmed" OR "billed")';
@@ -50,7 +58,6 @@ function extractPlainText(payload: any): string {
     const nested = extractPlainText(p);
     if (nested) return nested;
   }
-  // fallback: html
   for (const p of parts) {
     if (p.mimeType === "text/html" && p.body?.data) {
       return decodeBase64Url(p.body.data).replace(/<[^>]+>/g, " ");
@@ -92,18 +99,41 @@ async function classifyEmail(emailBody: string, lovableKey: string) {
                   ],
                 },
                 service_name: { type: "string" },
+                subscription_type: { type: "string", enum: ["trial", "paid", ""] },
                 trial_end_date: { type: "string" },
+                next_billing_date: { type: "string" },
                 amount: { type: "string" },
                 currency: { type: "string" },
                 frequency: { type: "string", enum: ["monthly", "yearly", ""] },
+                cancellation_link: { type: "string" },
+                sender_email: { type: "string" },
+                priority: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] },
+                risk_signals: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                    enum: [
+                      "price_increase",
+                      "auto_renewal_warning",
+                      "trial_ending_urgency",
+                      "failed_payment",
+                    ],
+                  },
+                },
               },
               required: [
                 "category",
                 "service_name",
+                "subscription_type",
                 "trial_end_date",
+                "next_billing_date",
                 "amount",
                 "currency",
                 "frequency",
+                "cancellation_link",
+                "sender_email",
+                "priority",
+                "risk_signals",
               ],
               additionalProperties: false,
             },
@@ -156,7 +186,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY not configured" }, 500);
 
-    // 1. List message IDs
     const listUrl = new URL("https://gmail.googleapis.com/gmail/v1/users/me/messages");
     listUrl.searchParams.set("q", SUBSCRIPTION_QUERY);
     listUrl.searchParams.set("maxResults", String(Math.min(max_emails, 100)));
@@ -186,7 +215,6 @@ serve(async (req) => {
       return json({ scanned: 0, found: 0, message: "No subscription emails found." });
     }
 
-    // 2. Fetch each message + classify (cap concurrency simply)
     let foundCount = 0;
     let scanned = 0;
     const limited = messageIds.slice(0, max_emails);
@@ -206,7 +234,6 @@ serve(async (req) => {
         const body = extractPlainText(msg.payload).slice(0, 5000);
         const composed = `From: ${from}\nSubject: ${subject}\n\n${body}`;
 
-        // Skip if we already classified this email body
         const { data: existing } = await supabase
           .from("classifications")
           .select("id")
@@ -223,10 +250,18 @@ serve(async (req) => {
           email_body: composed,
           category: result.category,
           service_name: result.service_name || null,
+          subscription_type: result.subscription_type || null,
           trial_end_date: result.trial_end_date || null,
+          next_billing_date: result.next_billing_date || null,
           amount: result.amount || null,
           currency: result.currency || null,
           frequency: result.frequency || null,
+          cancellation_link: result.cancellation_link || null,
+          sender_email: result.sender_email || from || null,
+          priority: result.priority || null,
+          risk_signals: Array.isArray(result.risk_signals) && result.risk_signals.length
+            ? result.risk_signals
+            : null,
         });
         if (!insErr) foundCount++;
       } catch (e) {

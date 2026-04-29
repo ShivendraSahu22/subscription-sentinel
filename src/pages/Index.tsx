@@ -29,14 +29,40 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { ScanOtpDialog } from "@/components/ScanOtpDialog";
 
+type Priority = "HIGH" | "MEDIUM" | "LOW";
+type RiskSignal =
+  | "price_increase"
+  | "auto_renewal_warning"
+  | "trial_ending_urgency"
+  | "failed_payment";
+
 type Classification = {
   id: string;
   category: string;
   service_name: string | null;
+  subscription_type: string | null;
   trial_end_date: string | null;
+  next_billing_date: string | null;
   amount: string | null;
   currency: string | null;
   frequency: string | null;
+  cancellation_link: string | null;
+  sender_email: string | null;
+  priority: Priority | null;
+  risk_signals: RiskSignal[] | null;
+};
+
+const priorityStyles: Record<Priority, string> = {
+  HIGH: "bg-destructive/10 text-destructive border-destructive/30",
+  MEDIUM: "bg-warning/10 text-warning border-warning/30",
+  LOW: "bg-muted text-muted-foreground border-border",
+};
+
+const riskSignalLabels: Record<RiskSignal, string> = {
+  price_increase: "Price increase",
+  auto_renewal_warning: "Auto-renewal warning",
+  trial_ending_urgency: "Trial ending soon",
+  failed_payment: "Failed payment",
 };
 
 type Message =
@@ -47,6 +73,7 @@ type SavedRow = Classification & {
   email_body: string;
   created_at: string;
 };
+
 
 type ReminderType = "upcoming" | "last_day";
 type ReminderRow = { id: string; classification_id: string; type: ReminderType; message: string };
@@ -135,10 +162,16 @@ const Index = () => {
         id: data.id,
         category: data.category,
         service_name: data.service_name || null,
+        subscription_type: data.subscription_type || null,
         trial_end_date: data.trial_end_date || null,
+        next_billing_date: data.next_billing_date || null,
         amount: data.amount || null,
         currency: data.currency || null,
         frequency: data.frequency || null,
+        cancellation_link: data.cancellation_link || null,
+        sender_email: data.sender_email || null,
+        priority: (data.priority as Priority) || null,
+        risk_signals: Array.isArray(data.risk_signals) ? (data.risk_signals as RiskSignal[]) : null,
       };
       setMessages((m) => [...m, { role: "assistant", result, id: crypto.randomUUID() }]);
       loadAll();
@@ -387,12 +420,22 @@ const Index = () => {
                     className="rounded-lg border border-border/60 bg-background p-3 transition-shadow hover:shadow-soft"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] ${categoryStyles[h.category] ?? ""}`}
-                      >
-                        {h.category}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${categoryStyles[h.category] ?? ""}`}
+                        >
+                          {h.category}
+                        </Badge>
+                        {h.priority && (
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${priorityStyles[h.priority]}`}
+                          >
+                            {h.priority}
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-[10px] text-muted-foreground">
                         {new Date(h.created_at).toLocaleTimeString([], {
                           hour: "2-digit",
@@ -463,12 +506,15 @@ const ResultCard = ({
 
   const fields: { label: string; value: string }[] = [
     { label: "Service", value: result.service_name ?? "" },
+    { label: "Type", value: result.subscription_type ?? "" },
     { label: "Trial ends", value: result.trial_end_date ?? "" },
+    { label: "Next billing", value: result.next_billing_date ?? "" },
     {
       label: "Amount",
       value: [result.amount, result.currency].filter(Boolean).join(" "),
     },
     { label: "Frequency", value: result.frequency ?? "" },
+    { label: "Sender", value: result.sender_email ?? "" },
   ].filter((f) => f.value);
 
   const canRemind =
@@ -498,14 +544,41 @@ const ResultCard = ({
 
   return (
     <div className="max-w-[85%] space-y-3 rounded-2xl rounded-tl-sm border border-border/60 bg-card p-4 shadow-soft">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Category
-        </p>
-        <Badge variant="outline" className={`mt-1 ${categoryStyles[result.category] ?? ""}`}>
-          {result.category}
-        </Badge>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Category
+          </p>
+          <Badge variant="outline" className={`mt-1 ${categoryStyles[result.category] ?? ""}`}>
+            {result.category}
+          </Badge>
+        </div>
+        {result.priority && (
+          <div className="text-right">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Priority
+            </p>
+            <Badge variant="outline" className={`mt-1 ${priorityStyles[result.priority]}`}>
+              {result.priority}
+            </Badge>
+          </div>
+        )}
       </div>
+
+      {result.risk_signals && result.risk_signals.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 border-t border-border/60 pt-3">
+          {result.risk_signals.map((s) => (
+            <Badge
+              key={s}
+              variant="outline"
+              className="border-warning/30 bg-warning/10 text-[10px] text-warning"
+            >
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              {riskSignalLabels[s] ?? s}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {fields.length > 0 && (
         <div className="grid grid-cols-2 gap-3 border-t border-border/60 pt-3">
@@ -517,6 +590,22 @@ const ResultCard = ({
           ))}
         </div>
       )}
+
+      {result.cancellation_link && (
+        <div className="border-t border-border/60 pt-3">
+          <p className="text-xs text-muted-foreground">Cancellation link</p>
+          <a
+            href={result.cancellation_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 block break-all text-sm text-primary underline-offset-2 hover:underline"
+          >
+            {result.cancellation_link}
+          </a>
+        </div>
+      )}
+
+
 
       {canRemind && (
         <div className="space-y-2 border-t border-border/60 pt-3">
