@@ -52,37 +52,55 @@ export type Database = {
       classifications: {
         Row: {
           amount: string | null
+          cancellation_link: string | null
           category: string
           created_at: string
           currency: string | null
           email_body: string
           frequency: string | null
           id: string
+          next_billing_date: string | null
+          priority: string | null
+          risk_signals: string[] | null
+          sender_email: string | null
           service_name: string | null
+          subscription_type: string | null
           trial_end_date: string | null
           user_id: string | null
         }
         Insert: {
           amount?: string | null
+          cancellation_link?: string | null
           category: string
           created_at?: string
           currency?: string | null
           email_body: string
           frequency?: string | null
           id?: string
+          next_billing_date?: string | null
+          priority?: string | null
+          risk_signals?: string[] | null
+          sender_email?: string | null
           service_name?: string | null
+          subscription_type?: string | null
           trial_end_date?: string | null
           user_id?: string | null
         }
         Update: {
           amount?: string | null
+          cancellation_link?: string | null
           category?: string
           created_at?: string
           currency?: string | null
           email_body?: string
           frequency?: string | null
           id?: string
+          next_billing_date?: string | null
+          priority?: string | null
+          risk_signals?: string[] | null
+          sender_email?: string | null
           service_name?: string | null
+          subscription_type?: string | null
           trial_end_date?: string | null
           user_id?: string | null
         }
