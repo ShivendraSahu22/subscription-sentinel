@@ -7,19 +7,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are an AI assistant that detects subscription-related emails.
+const SYSTEM_PROMPT = `You are an AI assistant that detects whether an email is related to a subscription, SaaS, OTT (Netflix/Prime/etc.), mobile app, or any recurring billing.
 
-Classify the email into:
-FREE_TRIAL_STARTED, TRIAL_ENDING_SOON, PAYMENT_CONFIRMED, SUBSCRIPTION_RENEWAL, NOT_RELEVANT
+CLASSIFY into one of:
+- FREE_TRIAL_STARTED
+- TRIAL_ENDING_SOON
+- PAYMENT_CONFIRMED
+- SUBSCRIPTION_RENEWAL
+- NOT_RELEVANT
 
-Extract:
+EXTRACT:
 - service_name
-- trial_end_date
-- amount
-- currency
-- frequency (monthly/yearly)
+- subscription_type: "trial" or "paid" (empty if unknown)
+- amount (numeric only, e.g. "9.99")
+- currency (ISO like USD, EUR, INR — or symbol if that's all there is)
+- billing_cycle / frequency: "monthly" or "yearly" (empty if unknown)
+- next_billing_date (ISO date YYYY-MM-DD if possible)
+- trial_end_date (ISO date YYYY-MM-DD if possible)
+- cancellation_link (full URL if present in the email)
+- sender_email (the From address)
 
-If a field cannot be determined, return an empty string for it.`;
+DETECT hidden risk patterns and include any that apply in risk_signals:
+- "price_increase"
+- "auto_renewal_warning"
+- "trial_ending_urgency"
+- "failed_payment"
+
+ASSIGN priority based on user risk:
+- HIGH → a payment or renewal will happen within the next 3 days, OR failed payment
+- MEDIUM → trial ending soon, or price change announced
+- LOW → purely informational
+
+Use empty string for any unknown text field. Use empty array for risk_signals if none.`;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -84,18 +103,41 @@ serve(async (req) => {
                     ],
                   },
                   service_name: { type: "string" },
+                  subscription_type: { type: "string", enum: ["trial", "paid", ""] },
                   trial_end_date: { type: "string" },
+                  next_billing_date: { type: "string" },
                   amount: { type: "string" },
                   currency: { type: "string" },
                   frequency: { type: "string", enum: ["monthly", "yearly", ""] },
+                  cancellation_link: { type: "string" },
+                  sender_email: { type: "string" },
+                  priority: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] },
+                  risk_signals: {
+                    type: "array",
+                    items: {
+                      type: "string",
+                      enum: [
+                        "price_increase",
+                        "auto_renewal_warning",
+                        "trial_ending_urgency",
+                        "failed_payment",
+                      ],
+                    },
+                  },
                 },
                 required: [
                   "category",
                   "service_name",
+                  "subscription_type",
                   "trial_end_date",
+                  "next_billing_date",
                   "amount",
                   "currency",
                   "frequency",
+                  "cancellation_link",
+                  "sender_email",
+                  "priority",
+                  "risk_signals",
                 ],
                 additionalProperties: false,
               },
@@ -118,7 +160,6 @@ serve(async (req) => {
     if (!toolCall) throw new Error("No tool call returned");
     const result = JSON.parse(toolCall.function.arguments);
 
-    // Persist to DB
     const { data: inserted, error: insertErr } = await supabase
       .from("classifications")
       .insert({
@@ -126,10 +167,18 @@ serve(async (req) => {
         email_body,
         category: result.category,
         service_name: result.service_name || null,
+        subscription_type: result.subscription_type || null,
         trial_end_date: result.trial_end_date || null,
+        next_billing_date: result.next_billing_date || null,
         amount: result.amount || null,
         currency: result.currency || null,
         frequency: result.frequency || null,
+        cancellation_link: result.cancellation_link || null,
+        sender_email: result.sender_email || null,
+        priority: result.priority || null,
+        risk_signals: Array.isArray(result.risk_signals) && result.risk_signals.length
+          ? result.risk_signals
+          : null,
       })
       .select()
       .single();
